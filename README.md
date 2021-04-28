@@ -41,6 +41,7 @@ pipenv uninstall pylint
 - edit cdktf.json
 - cdktf get
 - cdktf synth
+- cdktf deploy --auto-approve
 
 ## Clean up
 cdktf destroy
