@@ -20,4 +20,6 @@ make deploy
 ```
 
 ## Cleanup
-> make clean
+```bash
+make clean
+```
