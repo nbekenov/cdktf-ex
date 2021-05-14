@@ -3,13 +3,10 @@ sample stack of resources defined with CDK-TF
 """
 
 import os
-import sys
-import json
 import yaml
 from cdktf import App, TerraformStack, TerraformOutput
 from constructs import Construct
 from imports.aws import (
-    AwsProvider,
     ApiGatewayRestApi,
     ApiGatewayRestApiEndpointConfiguration,
     ApiGatewayDeployment,
@@ -21,7 +18,7 @@ from imports.aws import (
 
 # constants
 tf_bucket_name = os.environ["TF_STATE_BUCKET_NAME"]
-stack_name = "api-example"
+STACK_NAME = "api-example"
 
 
 class MyApiStack(TerraformStack):
@@ -33,7 +30,9 @@ class MyApiStack(TerraformStack):
         super().__init__(scope, ns)
 
     def create_api(self, api_name, api_spec_yaml, stage):
-
+        """
+        create aws rest api gateway
+        """
         # define resources here
         tags = {"ManagedBy": "terraform CDK", "user": "good.gentleman"}
 
@@ -50,6 +49,7 @@ class MyApiStack(TerraformStack):
                 ApiGatewayRestApiEndpointConfiguration(types=["REGIONAL"])
             ],
             body=open_api_body,
+            tags=tags,
         )
 
         # aws_api_gateway_deployment
@@ -70,7 +70,7 @@ class MyApiStack(TerraformStack):
         loging_settings = ApiGatewayMethodSettingsSettings(
             logging_level="ERROR", metrics_enabled=True
         )
-        method_settings = ApiGatewayMethodSettings(
+        ApiGatewayMethodSettings(
             self,
             f"method_setting-{api_name}",
             rest_api_id=rest_api.id,
@@ -79,13 +79,15 @@ class MyApiStack(TerraformStack):
             settings=[loging_settings],
         )
 
+        TerraformOutput(self, f"{api_name}-execution_arn", value=rest_api.execution_arn)
+
 
 def main():
     """
     build resources via CDK-TF
     """
     app = App()
-    stack = MyApiStack(app, stack_name)
+    stack = MyApiStack(app, STACK_NAME)
 
     stack.create_api(
         api_name="paymentconfig", api_spec_yaml="openapi-test.yaml", stage="dev"
