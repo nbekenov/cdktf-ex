@@ -48,7 +48,12 @@ class MyApiStack(TerraformStack):
             endpoint_configuration=[
                 ApiGatewayRestApiEndpointConfiguration(types=["REGIONAL"])
             ],
-            body=open_api_body,
+            # body=f''' templatefile("/Users/nbekenov/git_repos/cdktf-ex/api-example/openapi-test.yaml", 
+            #     {{  
+            #         example_function_arn = "arn:aws:lambda:us-east-1:324320755747:function:my-test-lambda"
+            #     }}
+            #     ) ''',
+            body = open_api_body,
             tags=tags,
         )
 
@@ -92,9 +97,9 @@ def main():
     stack.create_api(
         api_name="paymentconfig", api_spec_yaml="openapi-test.yaml", stage="dev"
     )
-    stack.create_api(
-        api_name="paymentconfig-mtls", api_spec_yaml="openapi-mtls.yaml", stage="dev"
-    )
+    # stack.create_api(
+    #     api_name="paymentconfig-mtls", api_spec_yaml="openapi-mtls.yaml", stage="dev"
+    # )
 
     # configure TF backend to use S3 to store state file
     stack.add_override(
