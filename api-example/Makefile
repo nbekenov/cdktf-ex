@@ -39,7 +39,6 @@ test: codelint  codetest cdktf_test
 
 deploy:
 	@printf "\n\n\033[0;32m** Deploy Lambda in cloud **\n\n\033[0m"
-	cdktf diff
 	cdktf deploy --auto-approve
 
 # invoke -- call Lambda in cloud

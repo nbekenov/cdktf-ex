@@ -21,7 +21,7 @@ tf_bucket_name = os.environ["TF_STATE_BUCKET_NAME"]
 STACK_NAME = "api-example"
 
 
-class MyApiStack(TerraformStack):
+class ServerlessStack(TerraformStack):
     """
     sample stack of resources defined with CDK-TF
     """
@@ -29,17 +29,13 @@ class MyApiStack(TerraformStack):
     def __init__(self, scope: Construct, ns: str):
         super().__init__(scope, ns)
 
-    def create_api(self, api_name, api_spec_yaml, stage):
+        self.tags = {"ManagedBy": "terraform CDK", "user": "good.gentleman"}
+
+    def create_api(self, api_name, api_spec_yaml):
         """
         create aws rest api gateway
         """
-        # define resources here
-        tags = {"ManagedBy": "terraform CDK", "user": "good.gentleman"}
-
-        with open(api_spec_yaml, "r") as file:
-            data = yaml.load(file)
-            open_api_body = yaml.dump(data)
-
+        
         # aws_api_gateway_rest_api
         rest_api = ApiGatewayRestApi(
             self,
@@ -48,13 +44,13 @@ class MyApiStack(TerraformStack):
             endpoint_configuration=[
                 ApiGatewayRestApiEndpointConfiguration(types=["REGIONAL"])
             ],
-            # body=f''' templatefile("/Users/nbekenov/git_repos/cdktf-ex/api-example/openapi-test.yaml", 
-            #     {{  
-            #         example_function_arn = "arn:aws:lambda:us-east-1:324320755747:function:my-test-lambda"
-            #     }}
-            #     ) ''',
-            body = open_api_body,
-            tags=tags,
+            body=f'''${{ templatefile("./{api_spec_yaml}", 
+                        {{  
+                            example_function_arn = ${{ var.environment }}"
+                        }}
+                    ) 
+                }}''',
+            tags=self.tags,
         )
 
         # aws_api_gateway_deployment
@@ -68,7 +64,7 @@ class MyApiStack(TerraformStack):
             f"stage-{api_name}",
             deployment_id=api_deployment.id,
             rest_api_id=rest_api.id,
-            stage_name=stage,
+            stage_name="${ var.environment }",
         )
 
         # aws_api_gateway_method_settings
@@ -84,18 +80,16 @@ class MyApiStack(TerraformStack):
             settings=[loging_settings],
         )
 
-        TerraformOutput(self, f"{api_name}-execution_arn", value=rest_api.execution_arn)
-
 
 def main():
     """
     build resources via CDK-TF
     """
     app = App()
-    stack = MyApiStack(app, STACK_NAME)
+    stack = ServerlessStack(app, "serverless")
 
     stack.create_api(
-        api_name="paymentconfig", api_spec_yaml="openapi-test.yaml", stage="dev"
+        api_name="paymentconfig", api_spec_yaml="openapi-test.yaml"
     )
     # stack.create_api(
     #     api_name="paymentconfig-mtls", api_spec_yaml="openapi-mtls.yaml", stage="dev"
