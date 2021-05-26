@@ -1,0 +1,24 @@
+openapi: "3.0.1"
+info:
+  version: 1.0.9
+  title: CDKTF API 2
+servers:
+  - url: https://ip-ranges.amazonaws.com
+    x-amazon-apigateway-endpoint-configuration:
+      disableExecuteApiEndpoint: true
+x-amazon-apigateway-request-validators:
+  all:
+    validateRequestBody: true
+    validateRequestParameters: true
+  params-only:
+    validateRequestBody: false
+    validateRequestParameters: true
+paths:
+  /debug:
+    get:
+      operationId: getDebug
+      responses:
+        default:
+          description: "Default response for GET /debug"
+      x-amazon-apigateway-integration:
+        $ref: '#/components/x-amazon-apigateway-integrations/debug'

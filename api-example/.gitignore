@@ -4,4 +4,3 @@ imports/*
 .terraform
 cdktf.out
 terraform.tfstate*
-variables.env
