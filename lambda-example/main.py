@@ -79,10 +79,10 @@ class MyLambdaStack(TerraformStack):
             lambda_name = key
             lambda_arn = service_conf[key]
             file_contents += f"{lambda_name}function_arn={lambda_arn}\n"
-            # terraform output
-            TerraformOutput(self, f"{lambda_name}_arn", 
-                value = lambda_arn
-            )
+            # # terraform output
+            # TerraformOutput(self, f"{lambda_name}_arn", 
+            #     value = lambda_arn
+            # )
 
         variable_env_file = File(self, "variable_env_file",
             filename = f"{project_dir}/variables.env",
