@@ -1,0 +1,23 @@
+{
+    "type": "WAFV2",
+    "preProcessRuleGroups": [
+        {
+            "ruleGroupArn": null,
+            "overrideAction": {
+                "type": "NONE"
+            },
+            "managedRuleGroupIdentifier": {
+                "version": null,
+                "vendorName": "AWS",
+                "managedRuleGroupName": "AWSManagedRulesCommonRuleSet"
+            },
+            "ruleGroupType": "ManagedRuleGroup",
+            "excludeRules": []
+        }
+    ],
+    "postProcessRuleGroups": [],
+    "defaultAction": {
+        "type": "ALLOW"
+    },
+    "overrideCustomerWebACLAssociation": false
+}
