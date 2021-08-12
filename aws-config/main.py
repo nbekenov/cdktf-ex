@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+"""
+AWS Config CDK-TF module
+"""
 import json
 from constructs import Construct
 from cdktf import App, TerraformStack
@@ -14,7 +17,14 @@ from imports.aws import (
 
 
 class AWSConfig(TerraformStack):
-    def __init__(self, scope: Construct, ns: str, profile_name):
+    """
+    AWS Config class
+    available public methods:
+        * enable_awsconfig_in_region
+        * enable_awsconfig_in_account
+        * add_config_rule - TBD
+    """
+    def __init__(self, scope: Construct, ns: str, profile_name, partition):
         super().__init__(scope, ns)
 
         # const
@@ -24,11 +34,11 @@ class AWSConfig(TerraformStack):
         self.resource_prefix = f"{self.application}-{self.environment}"
         self.tag_name_prefix = f"{self.application}-{self.environment}-region"
         self.profile_name = profile_name
+        self.partition = partition
 
 
     def enable_awsconfig_in_region(
         self,
-        account_id,
         region,
         bucket_name,
         include_global_resources,
@@ -38,12 +48,11 @@ class AWSConfig(TerraformStack):
         frequency="Six_Hours"
     ):
         """
-        Enables AWS config in specified region for a particular account_id
+        Enables AWS config in specified region for a particular account
         """
-        partition = "aws-us-gov" if "gov" in region else "aws"
         aws_provider = AwsProvider(self, f"aws-{region}", region=region, profile=self.profile_name, alias = f"aws-{region}")
         if create_role:
-            iam_role_arn = self.__create_iam_role(partition)
+            iam_role_arn = self.__create_iam_role()
         print(f"enabling AWS Config for region = {region} ...")
 
         recorder = ConfigConfigurationRecorder(self,f"recorder-{region}",
@@ -71,35 +80,32 @@ class AWSConfig(TerraformStack):
             provider = aws_provider
         )
 
-    def enable_awsconfig_in_account(self, account_id, partition, bucket_name):
+    def enable_awsconfig_in_account(self, account_id, bucket_name):
         """
         Enables AWS config in all supported regions
         """
-        iam_role_arn = self.__create_iam_role(partition)
-        regions = self.get_available_regions(partition)
-        
+        iam_role_arn = self.__create_iam_role()
+        regions = self.get_available_regions()
         # This ensures that you don’t get redundant copies of IAM configuration Items in every Region.
-        record_global_resources_region = "us-gov-west-1" if "gov" in partition else "us-east-1"
+        record_global_resources_region = "us-gov-west-1" if "gov" in self.partition else "us-east-1"
 
         for region in regions:
             self.enable_awsconfig_in_region(
-                account_id=account_id,
                 region = region,
                 bucket_name=bucket_name,
-                include_global_resources=True if region in record_global_resources_region else False,
+                include_global_resources=region in record_global_resources_region,
                 create_role = False,
                 iam_role_arn=iam_role_arn,
             )
-        print(f"AWS Config is enabled in all supported regions for account_id {account_id} in partition {partition}")    
+        print(f"AWS Config is enabled in all supported regions for account_id {account_id} in partition {self.partition}")
 
-    def __create_iam_role(self, partition):
+    def __create_iam_role(self):
         """
         Private helper method to create IAM role for AWS Config
-            * partition
         """
         # use default region for provider since IAM is a global resource
-        region = "us-gov-west-1" if "gov" in partition else "us-east-1"
-        aws_provider = AwsProvider(self, f"iam-aws-{region}", region=region, profile=self.profile_name)
+        region = "us-gov-west-1" if "gov" in self.partition else "us-east-1"
+        AwsProvider(self, f"iam-aws-{region}", region=region, profile=self.profile_name)
         assume_role_policy = {
             "Version": "2012-10-17",
             "Statement": [
@@ -112,7 +118,7 @@ class AWSConfig(TerraformStack):
                 }
             ]
         }
-        managed_policy_arn = f"arn:{partition}:iam::aws:policy/service-role/AWS_ConfigRole"
+        managed_policy_arn = f"arn:{self.partition}:iam::aws:policy/service-role/AWS_ConfigRole"
 
         aws_config_role = IamRole(self,"aws_config_role",
             name = f"{self.resource_prefix}-global-awsconfig-role",
@@ -123,23 +129,29 @@ class AWSConfig(TerraformStack):
         print(f"IAM role for AWS Config was creted in region = {region} ")
         return aws_config_role.arn
 
-    def get_available_regions(self, partition):
+    def get_available_regions(self):
         """
-        Helper method to get list of supported regions 
+        Helper method to get list of supported regions
         based on provided partition.
         """
         sess = Session()
-        aws_config_regions = sess.get_available_regions('config',partition_name=partition, allow_non_regional=False)
+        aws_config_regions = sess.get_available_regions('config',partition_name=self.partition, allow_non_regional=False)
         return aws_config_regions
 
 
 def main():
-    account_list = {"9999": "dev", "8888": "prod"}
+    """
+    Enable AWS Config in all account from the list
+    accounts_list = {
+        "account_id": "profile_name"
+    }
+    """
+    accounts_list = {"9999": "dev", "8888": "prod"}
 
-    for account, profile in account_list.items():
+    for account, profile in accounts_list.items():
         app = App(stack_traces=False)
-        aws_config = AWSConfig(app, f"aws-config-{account}", profile)
-        aws_config.enable_awsconfig_in_account(account_id=account, partition="aws", bucket_name="test")
+        aws_config = AWSConfig(app, f"aws-config-{account}", profile_name=profile, partition="aws")
+        aws_config.enable_awsconfig_in_account(account_id=account, bucket_name="test")
         app.synth()
 
 
