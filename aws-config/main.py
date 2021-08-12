@@ -84,12 +84,11 @@ class AWSConfig(TerraformStack):
         """
         Enables AWS config in all supported regions
         """
-        iam_role_arn = self.__create_iam_role()
-        regions = self.get_available_regions()
         # This ensures that you don’t get redundant copies of IAM configuration Items in every Region.
         record_global_resources_region = "us-gov-west-1" if "gov" in self.partition else "us-east-1"
+        iam_role_arn = self.__create_iam_role()
 
-        for region in regions:
+        for region in self.get_available_regions():
             self.enable_awsconfig_in_region(
                 region = region,
                 bucket_name=bucket_name,
@@ -146,12 +145,14 @@ def main():
         "account_id": "profile_name"
     }
     """
-    accounts_list = {"9999": "dev", "8888": "prod"}
+    accounts_list = {"99999": "mydev", "88888": "myprod"}
+    s3_bucket_name = "my-config-bucket"
+    partition_name = "aws"
 
     for account, profile in accounts_list.items():
         app = App(stack_traces=False)
-        aws_config = AWSConfig(app, f"aws-config-{account}", profile_name=profile, partition="aws")
-        aws_config.enable_awsconfig_in_account(account_id=account, bucket_name="test")
+        aws_config = AWSConfig(app, f"aws-config-{account}", profile_name=profile, partition=partition_name)
+        aws_config.enable_awsconfig_in_account(account_id=account, bucket_name=s3_bucket_name)
         app.synth()
 
 
