@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+"""
+AWS Firewall Manager CDK-TF module
+"""
 import os
 import sys
 import json
@@ -11,26 +14,32 @@ from imports.aws import (
 )
 
 class FirewallManager(TerraformStack):
+    """
+    AWS Firewall Manager class
+    available public methods:
+        * set_admin_account
+        * create_global_policy
+        * create_region_policy
+    """
     def __init__(self, scope: Construct, ns: str, profile_name, partition):
         super().__init__(scope, ns)
 
-        self.profile_name = profile_name
-        region = "us-gov-west-1" if "gov" in partition else "us-east-1" 
+        self.profile_name = profile_name if profile_name else "default"
+        region = "us-gov-west-1" if "gov" in partition else "us-east-1"
         AwsProvider(self, f"aws-{region}", region=region, profile=profile_name)
 
     def set_admin_account(self):
         """
-        Associates an AWS Firewall Manager administrator account. 
-        This operation must be performed in the us-east-1 region.
-        aws_fms_admin_account
+        Associates an AWS Firewall Manager administrator account.
+        This operation must be performed in the us-east-1 or us-gov-west-1 region.
         """
-        # FmsAdminAccount(self, "fms-admin")
-        pass
-    
-    def create_global_policy(self, policy_name, rules_file):
+        FmsAdminAccount(self, "fms-admin")
+
+    def create_global_policy(self, policy_name, rules_file, remediate: bool):
         """
         Create AWS Firewall Manager policy
         global scope -> CloudFront
+        remediate - if set True then auto remediate any noncompliant resources
         """
         rules = self.__parse_rule(rules_file)
 
@@ -44,13 +53,15 @@ class FirewallManager(TerraformStack):
                     managed_service_data = json.dumps(rules)
                 )
             ],
-            remediation_enabled=True, # Auto remediate any noncompliant resourcesß
+            remediation_enabled=remediate,
         )
-    
-    def create_region_policy(self, policy_name, rules_file, region):
+        global_policy.override_logical_id(f"fms-globalpolicy-{policy_name}")
+
+    def create_region_policy(self, policy_name, rules_file, region, remediate: bool):
         """
         Create AWS Firewall Manager policy
         region scope -> ALB, ApiGateway
+        remediate - if set True then auto remediate any noncompliant resources
         """
         aws = AwsProvider(self, f"aws-fms-{region}",
             region=region,
@@ -58,24 +69,29 @@ class FirewallManager(TerraformStack):
             alias = f"aws-{region}"
         )
         rules = self.__parse_rule(rules_file)
-        
-        region_policy = FmsPolicy(self,f"fms-policy-{policy_name}",
+
+        region_policy = FmsPolicy(self,f"fms-regionpolicy-{policy_name}",
             name=policy_name,
             exclude_resource_tags=False,
-            resource_type_list = ["AWS::ElasticLoadBalancingV2::LoadBalancer", "AWS::ApiGateway::Stage"],
+            resource_type_list = [
+                "AWS::ElasticLoadBalancingV2::LoadBalancer",
+                "AWS::ApiGateway::Stage"
+            ],
             security_service_policy_data = [
                 FmsPolicySecurityServicePolicyData(
                     type="WAFV2",
                     managed_service_data = json.dumps(rules)
                 )
             ],
-            remediation_enabled=True, # Auto remediate any noncompliant resources
+            remediation_enabled=remediate,
             provider = aws
         )
+        region_policy.override_logical_id(f"fms-regionpolicy-{policy_name}")
 
-    def __parse_rule(self, file_name):
+    @staticmethod
+    def __parse_rule(file_name):
         """
-        Parse and validate json file with rules definitions
+        Private helper method to parse and validate json file with rules definitions
         """
         project_dir = os.path.dirname(os.path.realpath(__file__))
         rule_data = {}
@@ -91,14 +107,31 @@ class FirewallManager(TerraformStack):
 
 
 def main():
+    """
+    Example: Create FMS policies for global and region scope
+        aws_account_profile_name - your profile name, if epmty then profile "default" will be used
+        partition - "aws" or "aws-us-gov"
+    """
+    # const
+    aws_account_profile_name = ""
+    partition="aws"
+
     app = App(stack_traces=False)
-    waf_manager = FirewallManager(app, "waf-manager", profile_name="nurdev", partition="aws")
+    waf_manager = FirewallManager(app,
+        "waf-manager",
+        profile_name=aws_account_profile_name,
+        partition=partition
+    )
     # waf_manager.set_admin_account()
     waf_manager.create_global_policy(policy_name="FMS-Test-global",
-        rules_file="AWSCommonRuleSet.json"
+        rules_file="AWSCommonRuleSet.json",
+        remediate=True
     )
+
     waf_manager.create_region_policy(policy_name="FMS-Test-regional",
-        rules_file="AWSCommonRuleSet.json", region="us-east-1"
+        rules_file="AWSCommonRuleSet.json",
+        region="us-east-1",
+        remediate=True
     )
     app.synth()
 

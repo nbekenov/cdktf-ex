@@ -8,3 +8,6 @@ python_version = "3"
 
 [packages]
 cdktf = "~=0.5.0"
+
+[dev-packages]
+pylint = "*"
