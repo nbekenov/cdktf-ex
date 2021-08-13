@@ -18,6 +18,7 @@
 * Integrate Security Hub with Firewall Manager to detect resources that are not properly protected by WAF rules [link](https://aws.amazon.com/about-aws/whats-new/2019/12/aws-security-hub-integrates-with-aws-firewall-manager/)
 * Centralized visibility into Shield Advanced DDoS events [link](https://aws.amazon.com/blogs/security/set-up-centralized-monitoring-for-ddos-events-and-auto-remediate-noncompliant-resources/)
 * WAFv2 api ref [link](https://docs.aws.amazon.com/waf/latest/APIReference/Welcome.html)
+* WAF rules api ref [link](https://docs.aws.amazon.com/fms/2018-01-01/APIReference/API_SecurityServicePolicyData.html)
 
 ---
 ## Dev Prerequisites
