@@ -6,7 +6,6 @@ app_code = $(shell git ls-files '*.py')
 # codelint -- reformat and find syntax issues
 codelint:
 	@printf "\n\n\033[0;32m** Static code analysis (pylint) **\n\n\033[0m"
-	pipenv run black $(app_code)
 	pipenv run pylint $(app_code)
 
 seclint:
